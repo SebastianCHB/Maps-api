@@ -6,6 +6,9 @@ let currentSearch = "Tacos, comida, restaurantes";
 let currentCityName = "Nuevo Casas Grandes";
 const restaurantListElement = document.getElementById("restaurants-list");
 
+// almacenar lugares para el map
+let currentPlacesData = [];
+
 async function initMap() {
   const defaultLocation = center;
   await google.maps.importLibrary("places");
@@ -71,10 +74,49 @@ function setupEventListeners() {
   if (chucheriasButton) {
     chucheriasButton.addEventListener("click",(event)=>{
         event.preventDefault();
-        currentSearch = "Dulceria, tienda de dulces";
+        currentSearch = "tienda y abarrotes";
         findPlaces(currentSearch);
     })
   }
+}
+
+function displayPlacesList(placesToShow) {
+  restaurantListElement.innerHTML = "";
+    for (const place of placesToShow) {
+        displayRestaurant(place);           
+  }
+}
+
+//ORDENAR POR CALIFICACION
+const orderButton = document.getElementById("mejorvalorados");
+  if (orderButton) {
+    orderButton.addEventListener("click", (event) => {
+      event.preventDefault(); 
+      currentPlacesData.sort( (a, b) => {
+        //indefinidos al final
+        if (a.rating === undefined) return 1;
+        if (b.rating === undefined) return -1;
+        return b.rating - a.rating; // Ordenar
+      });
+
+      // dibujar la lista
+      displayPlacesList(currentPlacesData);
+    });
+  }
+
+
+const commentsButton = document.getElementById("btncomentarios");
+if (commentsButton) {
+  commentsButton.addEventListener("click", (event) => {
+    event.preventDefault();
+    
+    currentPlacesData.sort( (a, b) => {
+      if (a.userRatingCount === undefined) return 1;
+      if (b.userRatingCount === undefined) return -1;
+      return b.userRatingCount - a.userRatingCount; 
+    });
+    displayPlacesList(currentPlacesData);
+  });
 }
 
 async function searchCityAndPlaces(cityName) {
@@ -122,11 +164,11 @@ async function findPlaces(searchText) {
     textQuery: fullQuery,
     fields: [
       "displayName", "location", "businessStatus",
-      "rating", "photos", "formattedAddress",
+      "rating", "photos", "formattedAddress","userRatingCount"
     ],
     locationBias: {
       center: center,
-      radius: 15000 
+      radius: 15000     
     },
     isOpenNow: true,
     language: "es-MX",
@@ -138,6 +180,7 @@ async function findPlaces(searchText) {
   console.log("Buscando con query:", fullQuery);
 
   const { places } = await Place.searchByText(request);
+  currentPlacesData = places;
   const { LatLngBounds } = await google.maps.importLibrary("core");
   const bounds = new LatLngBounds();
 
@@ -152,6 +195,8 @@ async function findPlaces(searchText) {
       totalLng += place.location.lng();
       await addMarkerAndDisplay(place, bounds);
     }
+
+    displayPlacesList(currentPlacesData);
 
     const averageLat = totalLat / places.length;
     const averageLng = totalLng / places.length;
@@ -169,13 +214,13 @@ async function addMarkerAndDisplay(place, bounds) {
 
   const marker = new AdvancedMarkerElement({
     map,
-    position: place.location,
+    position: place.location,
     title: place.displayName,
   });
 
   bounds.extend(place.location);
   markers.push(marker);
-  displayRestaurant(place);
+  //displayRestaurant(place);
 
   marker.addListener("click", () => {
     infoWindow.close();
