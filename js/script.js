@@ -318,3 +318,4 @@ function showNoResultsMessage(searchText) {
 }
 
 document.addEventListener("DOMContentLoaded", setupEventListeners);
+console.log(currentPlacesData);
